@@ -1,0 +1,5 @@
+cmake-build-*
+bindings/python/build
+bindings/python/_yatq.*
+bindings/python/pytq.egg-info
+__pycache__
