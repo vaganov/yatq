@@ -324,6 +324,7 @@ private:
 
 #ifndef YATQ_DISABLE_FUTURES
                     future.then(  // future chaining -- this is why we use 'boost::future' instead of 'std::future'
+                        boost::launch::sync,
                         [promise = std::move(map_entry.promise)]
                         (Executor::Future future) mutable
                         { internal::get_and_set_value<result_type>(std::move(future), std::move(promise)); }
