@@ -340,7 +340,7 @@ private:
                             guard,
                             deadline,
                             [this, current_uid] () {
-                                return (_heap[0].uid != current_uid) || !_jobs.contains(current_uid) || !_running;
+                                return !_jobs.contains(current_uid) || (_heap[0].uid != current_uid) || !_running;
                             }
                     );
                     LOG4CXX_TRACE(logger, "Wake-up");
