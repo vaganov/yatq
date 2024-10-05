@@ -37,25 +37,28 @@ comes with an executor to actually run jobs.
     - [Canceling timers](#canceling-timers-1)
     - [Awaiting return value](#awaiting-return-value)
     - [Scheduling tweaks](#scheduling-tweaks-1)
+  - [Timer precision](#timer-precision)
 - [Prerequisites and dependencies (C++)](#prerequisites-and-dependencies-c)
   - [C++20](#c20)
   - [boost](#boost)
   - [log4cxx](#log4cxx)
   - [pthread](#pthread)
   - [cmake](#cmake)
+  - [BDE](#bde)
 - [Prerequisites and dependencies (python)](#prerequisites-and-dependencies-python)
   - [python 3.7+](#python-37)
   - [cmake](#cmake-1)
   - [pybind11](#pybind11)
   - [pytest](#pytest)
   - [pytest-asyncio](#pytest-asyncio)
-- [Timer precision](#timer-precision)
 - [Build and install (C++)](#build-and-install-c)
   - [cmake](#cmake-2)
   - [shell](#shell)
   - [running tests](#running-tests)
 - [Build and install (python)](#build-and-install-python)
   - [running tests](#running-tests-1)
+- [Comparison with analogs](#comparison-with-analogs)
+  - [bdlmt::EventScheduler](#bdlmt---eventscheduler)
 
 ## Usage
 ### Basic usage (C++)
@@ -315,6 +318,44 @@ non-concurrent application blocking on `handle.result.get()` would be more effic
 
     timer_queue.start(sched_policy=os.SCHED_FIFO)
 
+### Timer precision
+How precise is timer? In other words, what are expected delays between specified deadline and actual execution?
+
+Apparently delays depend on the machine architecture and especially on the OS scheduler. To see delay distribution on a
+particular machine, run **test_precision** test: it runs for about 10 sec and saves delay samples as **tq_delays.dat**
+in the working directory. The test instantiates `TimerQueue` with a synchronous executor and
+`std::chrono::high_resolution_clock` and starts the timer queue with `SCHED_FIFO` scheduling policy and maximum
+priority; the logging is compiled out.
+
+Delay samples may be analyzed with any statistical tool. Please find a
+[jupyter notebook](tests/precision/delay_histogram.ipynb) to draw a histogram:
+
+    []: %matplotlib inline
+
+    []: import matplotlib.pyplot as plt
+
+    []: import numpy as np
+
+    []: from scipy.stats.mstats import winsorize
+
+    []: tq_delays = np.fromfile('tq_delays.dat', sep=',')
+
+    []: tq_delays.min(), tq_delays.max()
+
+    []: tq_delays.mean(), tq_delays.std(ddof=1)  # Bessel’s correction
+
+    []: _ = plt.hist(winsorize(tq_delays, limits=(0, 0.01)), bins=100)  # you may want to winsorize the tail percentile
+
+Timer delays are mostly brought by underlying
+[std::condition_variable::wait_until()](https://en.cppreference.com/w/cpp/thread/condition_variable/wait_until). To see
+its delay distribution on a particular machine, run **test_wait_until** test: it runs for about 10 sec and saves delay
+samples as **cv_delays.dat** in the working directory. The test does not involve **yatq** except for calling
+
+    yatq::utils::set_sched_params(pthread_self(), SCHED_FIFO, yatq::utils::max_priority);
+
+`std::chrono::high_resolution_clock` is being used as clock. Delay samples may be visualized with the same
+[jupyter notebook](tests/precision/delay_histogram.ipynb).
+
 ## Prerequisites and dependencies (C++)
 Please refer to your OS package manager documentation on how to install the dependencies.
 
@@ -354,6 +395,9 @@ define `YATQ_DISABLE_PTHREAD` macro (in which case `TimerQueue` may only be star
 ### [cmake](https://cmake.org/download)
 **cmake** is being used for building tests and installation (the latter may be done by simply copying the headers).
 
+### [BDE](http://bloomberg.github.io/bde/library_information/build.html)
+**BDE** is only used in comparison tests. It has nothing to do with **yatq**.
+
 ## Prerequisites and dependencies (python)
 Since _python_ wrapper is essentially a dynamic library, all _C++_ dependencies apply as well. _python_ dependencies may
 be installed all at once with
@@ -374,44 +418,6 @@ _python_ wrapper has been tested on versions _python3.7_ -- _python3.12_ as olde
 
 ### pytest-asyncio
 **pytest-asyncio** is a **pytest** plugin for async tests.
-
-## Timer precision
-How precise is timer? In other words, what are expected delays between specified deadline and actual execution?
-
-Apparently delays depend on the machine architecture and especially on the OS scheduler. To see delay distribution on a
-particular machine, run **test_precision** test: it runs for about 10 sec and saves delay samples as **tq_delays.dat**
-in the working directory. The test instantiates `TimerQueue` with a synchronous executor and
-`std::chrono::high_resolution_clock` and starts the timer queue with `SCHED_FIFO` scheduling policy and maximum
-priority; the logging is compiled out.
-
-Delay samples may be analyzed with any statistical tool. Please find a
-[jupyter notebook](tests/precision/delay_histogram.ipynb) to draw a histogram:
-
-    []: %matplotlib inline
-
-    []: import matplotlib.pyplot as plt
-
-    []: import numpy as np
-
-    []: from scipy.stats.mstats import winsorize
-
-    []: tq_delays = np.fromfile('tq_delays.dat', sep=',')
-
-    []: tq_delays.min(), tq_delays.max()
-
-    []: tq_delays.mean(), tq_delays.std(ddof=1)  # Bessel’s correction
-
-    []: _ = plt.hist(winsorize(tq_delays, limits=(0, 0.01)), bins=100)  # you may want to winsorize the tail percentile
-
-Timer delays are mostly brought by underlying
-[std::condition_variable::wait_until()](https://en.cppreference.com/w/cpp/thread/condition_variable/wait_until). To see
-its delay distribution on a particular machine, run **test_wait_until** test: it runs for about 10 sec and saves delay
-samples as **cv_delays.dat** in the working directory. The test does not involve **yatq** except for calling
-
-    yatq::utils::set_sched_params(pthread_self(), SCHED_FIFO, yatq::utils::max_priority);
-
-`std::chrono::high_resolution_clock` is being used as clock. Delay samples may be visualized with the same
-[jupyter notebook](tests/precision/delay_histogram.ipynb).
 
 ## Build and install (C++)
 Since **yatq** is a template library, there is no build stage as such (apart from the tests).
@@ -452,3 +458,19 @@ believe this may be an issue for your _python_ environment, please upvote [issue
 ### running tests
 
     (venv) $ pytest tests/python
+
+## Comparison with analogs
+Despite "yet another" in the name, not many analogs may be found out there. However,
+[BDE](http://bloomberg.github.io/bde/index.html)'s
+[bdlmt::EventScheduler](https://bloomberg.github.io/bde-resources/doxygen/bde_api_prod/classbdlmt_1_1EventScheduler.html)
+provides a notable example.
+
+### [bdlmt::EventScheduler](https://bloomberg.github.io/bde-resources/doxygen/bde_api_prod/classbdlmt_1_1EventScheduler.html)
+The main difference between **yatq** and **BDE**'s component is that `bdlmt::EventScheduler` provides neither return
+values nor execution notifications. Apart from this, interfaces (expectedly) pretty much match each other.
+`bdlmt::EventScheduler` is also capable of scheduling recurring events.
+
+Runtime-wise, when built in release mode with `YATQ_DISABLE_FUTURES` macro, `yatq::TimerQueue::enqueue()` is typically
+couple times faster than `bdlmt::EventScheduler::scheduleEvent()` and `yatq::TimerQueue::cancel()` is insignificantly
+faster than `bdlmt::EventScheduler::cancelEvent()`. Run **test_load** and **test_bde** tests for more details on a
+particular machine (please note that **test_bde** requires **BDE** to be installed).
