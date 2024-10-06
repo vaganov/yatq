@@ -324,6 +324,7 @@ private:
 
 #ifndef YATQ_DISABLE_FUTURES
                     future.then(  // future chaining -- this is why we use 'boost::future' instead of 'std::future'
+                        boost::launch::sync,
                         [promise = std::move(map_entry.promise)]
                         (Executor::Future future) mutable
                         { internal::get_and_set_value<result_type>(std::move(future), std::move(promise)); }
@@ -340,7 +341,7 @@ private:
                             guard,
                             deadline,
                             [this, current_uid] () {
-                                return (_heap[0].uid != current_uid) || !_jobs.contains(current_uid) || !_running;
+                                return !_jobs.contains(current_uid) || (_heap[0].uid != current_uid) || !_running;
                             }
                     );
                     LOG4CXX_TRACE(logger, "Wake-up");
