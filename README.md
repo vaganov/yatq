@@ -27,6 +27,7 @@ comes with an executor to actually run jobs.
     - [Job parameters](#job-parameters)
     - [Thread safety](#thread-safety)
     - [Algorithmic complexity](#algorithmic-complexity)
+    - [Auto-generated docs](#auto-generated-docs)
   - [Advanced usage (C++)](#advanced-usage-c)
     - [Canceling timers](#canceling-timers)
     - [Template parameters](#template-parameters)
@@ -160,6 +161,10 @@ following algorithmic complexity:
 Consider calling `purge()` periodically if the application cancels way more timed jobs in the far future than reach the
 execution. Canceling many jobs in the near future is not the case though as such timers will be purged by the timer
 queue thread.
+
+#### Auto-generated docs
+See also [TimerQueue](https://vaganov.github.io/yatq/doc/html/classyatq_1_1_timer_queue.html) and
+[ThreadPool](https://vaganov.github.io/yatq/doc/html/classyatq_1_1_thread_pool.html) class summaries.
 
 ### Advanced usage (C++)
 #### Canceling timers
