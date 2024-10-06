@@ -11,8 +11,7 @@ pool).
 The good news is we do not actually need to wait for all the timers, just for the first one in the queue -- which may of
 course be done within a single thread.
 
-**yatq** provides a single-threaded timer demultiplexer able to keep track of arbitrary number of timed jobs. Unlike
-[boost::asio::detail::timer_queue](https://www.boost.org/doc/libs/release/boost/asio/detail/timer_queue.hpp) it also
+**yatq** provides a single-threaded timer demultiplexer able to keep track of arbitrary number of timed jobs. It also
 comes with an executor to actually run jobs.
 
 **yatq** comes as a header-only _C++20_ library along with _python>=3.7_ embedding backed by
@@ -58,6 +57,7 @@ comes with an executor to actually run jobs.
 - [Build and install (python)](#build-and-install-python)
   - [running tests](#running-tests-1)
 - [Comparison with analogs](#comparison-with-analogs)
+  - [boost::asio::detail::timer_queue](#boost---asio---detail---timer_queue)
   - [bdlmt::EventScheduler](#bdlmt---eventscheduler)
 
 ## Usage
@@ -465,12 +465,17 @@ Despite "yet another" in the name, not many analogs may be found out there. Howe
 [bdlmt::EventScheduler](https://bloomberg.github.io/bde-resources/doxygen/bde_api_prod/classbdlmt_1_1EventScheduler.html)
 provides a notable example.
 
+### [boost::asio::detail::timer_queue](https://www.boost.org/doc/libs/release/boost/asio/detail/timer_queue.hpp)
+`boost::asio::detail::timer_queue` is merely a heap ordered by deadlines. It comes with no executor and provides no
+demultiplexer thread.
+
 ### [bdlmt::EventScheduler](https://bloomberg.github.io/bde-resources/doxygen/bde_api_prod/classbdlmt_1_1EventScheduler.html)
 The main difference between **yatq** and **BDE**'s component is that `bdlmt::EventScheduler` provides neither return
 values nor execution notifications. Apart from this, interfaces (expectedly) pretty much match each other.
 `bdlmt::EventScheduler` is also capable of scheduling recurring events.
 
-Runtime-wise, when built in release mode with `YATQ_DISABLE_FUTURES` macro, `yatq::TimerQueue::enqueue()` is typically
-couple times faster than `bdlmt::EventScheduler::scheduleEvent()` and `yatq::TimerQueue::cancel()` is insignificantly
-faster than `bdlmt::EventScheduler::cancelEvent()`. Run **test_load** and **test_bde** tests for more details on a
-particular machine (please note that **test_bde** requires **BDE** to be installed).
+Runtime-wise, when built in release mode with `YATQ_DISABLE_FUTURES` macro, on sufficiently large number of enqueued
+jobs `yatq::TimerQueue::enqueue()` is typically times faster than `bdlmt::EventScheduler::scheduleEvent()` and
+`yatq::TimerQueue::cancel()` is insignificantly faster than `bdlmt::EventScheduler::cancelEvent()`. Run **test_load**
+and **test_bde** tests for more details on a particular machine (please note that **test_bde** requires **BDE** to be
+installed).

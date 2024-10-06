@@ -39,7 +39,8 @@ int main() {
     auto start = HighResolutionTimerQueue::Clock::now();
     auto deadline = start + std::chrono::seconds(5);
 
-    HighResolutionTimerQueue::TimerHandle handle;
+    auto handle = timer_queue.enqueue(deadline, [deadline] () { evaluate_delay(deadline); });
+
     for (auto i = 0; i < N; ++i) {
         handle = timer_queue.enqueue(deadline, [] () {});
         *j++ = handle.uid;
@@ -48,8 +49,8 @@ int main() {
     auto stop = HighResolutionTimerQueue::Clock::now();
     auto duration = stop - start;
     long double duration_count = duration.count();
-    auto mean = duration_count / N;
-    std::clog << "enqueue: " << N << " samples, mean=" << mean << std::endl;
+    auto mean = duration_count / (N + 1);
+    std::clog << "enqueue: " << N + 1 << " samples, mean=" << mean << std::endl;
 
     start = HighResolutionTimerQueue::Clock::now();
     for (auto timer_uid: timer_uids) {
@@ -69,7 +70,6 @@ int main() {
     mean = duration_count / N;
     std::clog << "purge: 1 sample, " << N << " jobs, avg=" << mean << std::endl;
 
-    timer_queue.enqueue(deadline, [deadline] () { evaluate_delay(deadline); });
     ::sleep(5);
 
     timer_queue.stop();
