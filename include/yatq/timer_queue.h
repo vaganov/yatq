@@ -82,7 +82,7 @@ private:
     std::condition_variable _cond;
     std::unordered_map<uid_t, MapEntry> _jobs;
     std::vector<HeapEntry> _heap;
-    Executor* _executor;
+    Executor* const _executor;
     std::thread _thread;
 
 public:
@@ -324,7 +324,7 @@ private:
 
 #ifndef YATQ_DISABLE_FUTURES
                     future.then(  // future chaining -- this is why we use 'boost::future' instead of 'std::future'
-                        boost::launch::sync,
+                        boost::launch::sync,  // FIXME: does not match the concept
                         [promise = std::move(map_entry.promise)]
                         (Executor::Future future) mutable
                         { internal::get_and_set_value<result_type>(std::move(future), std::move(promise)); }
