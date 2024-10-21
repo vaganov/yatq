@@ -55,8 +55,10 @@ comes with an executor to actually run jobs.
   - [cmake](#cmake-2)
   - [shell](#shell)
   - [running tests](#running-tests)
+  - [building the application](#building-the-application)
 - [Build and install (python)](#build-and-install-python)
-  - [running tests](#running-tests-1)
+  - [pip](#pip)
+  - [building from source](#building-from-source)
 - [Comparison with analogs](#comparison-with-analogs)
   - [boost::asio::detail::timer_queue](#boost---asio---detail---timer_queue)
   - [bdlmt::EventScheduler](#bdlmt---eventscheduler)
@@ -446,22 +448,36 @@ Since **yatq** is a template library, there is no build stage as such (apart fro
     $ make
     $ ctest
 
+### building the application
+Make sure to link your application against dependency libraries. If using **cmake**, see
+[CMakeLists.txt](CMakeLists.txt) (**yatq_example** target):
+
+    find_package(Boost CONFIG REQUIRED COMPONENTS thread)
+    find_package(log4cxx CONFIG REQUIRED)
+
+    target_link_libraries(yatq_example Boost::thread log4cxx)
+
+For other build systems, please refer to your build system documentation on how to locate and link dependencies.
+
 ## Build and install (python)
 (Assuming target _python_ environment has been activated, if any)
 
+### pip
+
+    (venv) $ pip install pytq-cxx
+
+### building from source
+
+    (venv) $ pip install wheel setuptools pip --upgrade
     (venv) $ git clone https://github.com/vaganov/yatq
     (venv) $ cd yatq
-    (venv) $ pip install -r bindings/python/requirements.txt
-    (venv) $ pip install wheel setuptools pip --upgrade
     (venv) $ pip install bindings/python
 
-[(why step 4)](https://stackoverflow.com/questions/61235727/no-module-named-pybind11-after-installing-pybind11)
+[(why step 1)](https://stackoverflow.com/questions/61235727/no-module-named-pybind11-after-installing-pybind11)
 
-Note that _python_ package is named **pytq**. Technically this is [squatting](https://pypi.org/project/pytq). If you
-believe this may be an issue for your _python_ environment, please upvote [issue #1](https://github.com/vaganov/yatq/issues/1).
+To run tests:
 
-### running tests
-
+    (venv) $ pip install -r bindings/python/requirements.txt
     (venv) $ pytest tests/python
 
 ## Comparison with analogs
