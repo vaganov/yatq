@@ -1,0 +1,4 @@
+include _yatq/traits.h
+recursive-include _yatq/include *.h
+recursive-include setup_helpers *.cmake
+global-exclude */__pycache__/*
