@@ -1,3 +1,2 @@
-pybind11>=2.13.6
 pytest>=7.4.4
 pytest-asyncio>=0.21.2
