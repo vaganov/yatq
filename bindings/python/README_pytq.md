@@ -6,4 +6,4 @@ see [yatq homepage](https://github.com/vaganov/yatq)
 
 **NB:** Module name is, however, **pytq**
 
-    from pytq import ThreadPool, TimerQueue, AwaitableFuture
+    from pytq import ThreadPool, TimerQueue, pythonize

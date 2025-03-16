@@ -3,6 +3,8 @@
 #include <pybind11/chrono.h>
 #include <pybind11/functional.h>
 
+#include <functional>
+
 #ifndef YATQ_DISABLE_FUTURES
 #define BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
@@ -18,7 +20,9 @@
 namespace py = pybind11;
 
 using result_type = py::object;
+#ifndef YATQ_DISABLE_FUTURES
 using Future = boost::future<result_type>;
+#endif
 using Executable = std::function<result_type(void)>;
 using ThreadPool = yatq::ThreadPool<Executable>;
 using TimerQueue = yatq::TimerQueue<ThreadPool>;
@@ -29,7 +33,8 @@ PYBIND11_MODULE(_yatq, m) {
     py::class_<Future>(boost_submodule, "future")
         .def("get", &Future::get, py::call_guard<py::gil_scoped_release>())
         .def("wait", &Future::wait, py::call_guard<py::gil_scoped_release>())
-        .def("is_ready", py::overload_cast<>(&Future::is_ready, py::const_));
+        .def("is_ready", py::overload_cast<>(&Future::is_ready, py::const_))
+        .def("then", [] (Future& _this, std::function<void(Future&&)>&& func) { _this.then(boost::launch::sync, std::move(func)); }, py::arg("func"));
 #endif
 
 #ifndef YATQ_DISABLE_PTHREAD

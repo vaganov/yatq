@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 
 
 def test_get_non_blocks(timer_queue):
@@ -35,3 +36,17 @@ def test_wait_non_blocks(timer_queue):
     handle.result.wait()
 
     assert x == 4
+
+
+def test_then(thread_pool):
+    x = 2
+
+    def f(future):
+        nonlocal x
+        x += 1
+
+    result = thread_pool.execute(job=lambda: None)
+    result.then(func=f)
+    time.sleep(0.1)
+
+    assert x == 3

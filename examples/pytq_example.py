@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 import os
 
-from pytq import TimerQueue, ThreadPool, AwaitableFuture
+from pytq import TimerQueue, ThreadPool, pythonize
 
 
 class C:
@@ -24,7 +24,7 @@ async def main():
     handle = timer_queue.enqueue(deadline=deadline, job=lambda: C('test'))
     another_handle = timer_queue.enqueue(deadline=deadline, job=lambda: C("won't make it"))
     timer_queue.cancel(uid=another_handle.uid)
-    future = AwaitableFuture(handle.result)
+    future = pythonize(handle.result)
     return_value = await future
     print(return_value)
 
