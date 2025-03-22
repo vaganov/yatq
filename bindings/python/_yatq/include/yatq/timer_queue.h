@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <format>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -171,7 +172,7 @@ public:
         if (is_first) {
             _cond.notify_one();
         }
-        LOG4CXX_DEBUG(logger, "New timer uid=" + std::to_string(uid));
+        LOG4CXX_DEBUG(logger, std::format("New timer uid={}", uid));
         return {
             uid
             , deadline
@@ -197,7 +198,7 @@ public:
             std::lock_guard<std::mutex> guard(_lock);
             auto i = _jobs.find(uid);
             if (i != _jobs.end()) {
-                LOG4CXX_DEBUG(logger, "Canceling timer uid=" + std::to_string(uid));
+                LOG4CXX_DEBUG(logger, std::format("Canceling timer uid={}", uid));
                 _jobs.erase(i);
                 was_removed = true;
                 was_first = (_heap[0].uid == uid);
@@ -233,7 +234,7 @@ public:
             _cond.notify_one();
         }
         auto canceled_timers = total_timers - total_jobs;
-        LOG4CXX_DEBUG(logger, "Cleared " + std::to_string(total_jobs) + " timers and " + std::to_string(canceled_timers) + " canceled timers");
+        LOG4CXX_DEBUG(logger, std::format("Cleared {} timers and {} canceled timers", total_jobs, canceled_timers));
     }
 
     /**
@@ -258,7 +259,7 @@ public:
                         *i++ = std::move(heap_entry);
                     }
                     else {
-                        LOG4CXX_DEBUG(logger, "Timer uid=" + std::to_string(heap_entry.uid) + " has been canceled");
+                        LOG4CXX_DEBUG(logger, std::format("Timer uid={} has been canceled", heap_entry.uid));
                     }
                 }
                 std::make_heap(heap.begin(), heap.end(), TimerQueue::heap_cmp);
@@ -266,7 +267,7 @@ public:
             }
         }
         // NB: 'demux()' never waits on a canceled timer => no need to notify
-        LOG4CXX_DEBUG(logger, "Purged " + std::to_string(canceled_timers) + " canceled timers");
+        LOG4CXX_DEBUG(logger, std::format("Purged {} canceled timers", canceled_timers));
     }
 
     /**
@@ -298,7 +299,7 @@ private:
                 auto current_uid = _heap[0].uid;
                 auto i = _jobs.find(current_uid);
                 if (i == _jobs.end()) {
-                    LOG4CXX_DEBUG(logger, "Timer uid=" + std::to_string(current_uid) + " has been canceled");
+                    LOG4CXX_DEBUG(logger, std::format("Timer uid={} has been canceled", current_uid));
                     std::pop_heap(_heap.begin(), _heap.end(), TimerQueue::heap_cmp);
                     _heap.pop_back();
                     deadline_expired = false;
@@ -309,7 +310,7 @@ private:
                     deadline_expired = (_heap[0].deadline <= now);
                 }
                 if (deadline_expired) {
-                    LOG4CXX_DEBUG(logger, "Executing timer uid=" + std::to_string(current_uid));
+                    LOG4CXX_DEBUG(logger, std::format("Executing timer uid={}", current_uid));
                     auto node = _jobs.extract(i);
                     std::pop_heap(_heap.begin(), _heap.end(), TimerQueue::heap_cmp);
                     _heap.pop_back();
@@ -337,6 +338,7 @@ private:
                     // on Linux this leads to waiting for a random time point
                     std::chrono::time_point<Clock, typename Clock::duration> deadline = _heap[0].deadline;
                     LOG4CXX_TRACE(logger, "Wait until " + utils::time_point_to_string(deadline));
+                    LOG4CXX_TRACE(logger, std::format("Wait until {}", utils::time_point_to_string(deadline)));
                     bool notified = _cond.wait_until(
                             guard,
                             deadline,
