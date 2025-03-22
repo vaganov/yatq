@@ -16,5 +16,5 @@ def pythonize(src: _yatq.boost.future) -> asyncio.Future[Any]:
         except Exception as exc:
             chained.set_exception(exc)
 
-    src.then(func=on_done)
+    src.then(func=on_done, policy=_yatq.boost.launch.sync)
     return chained

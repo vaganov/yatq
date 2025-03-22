@@ -1,5 +1,8 @@
+import pytest
+
 from datetime import datetime, timedelta
-import time
+
+import _yatq.boost
 
 
 def test_get_non_blocks(timer_queue):
@@ -38,7 +41,7 @@ def test_wait_non_blocks(timer_queue):
     assert x == 4
 
 
-def test_then(thread_pool):
+def test_then_default_policy(thread_pool):
     x = 2
 
     def f(future):
@@ -46,7 +49,42 @@ def test_then(thread_pool):
         x += 1
 
     result = thread_pool.execute(job=lambda: None)
-    result.then(func=f)
-    time.sleep(0.1)
+    chained = result.then(func=f)
+    chained.wait()
+
+    assert x == 3
+
+
+@pytest.mark.parametrize(
+    'policy',
+    [
+        _yatq.boost.launch.none,
+        _yatq.boost.launch.async_,
+        _yatq.boost.launch.deferred,
+        # _yatq.boost.launch.executor,
+        _yatq.boost.launch.inherit,
+        _yatq.boost.launch.sync,
+        _yatq.boost.launch.any,
+    ],
+    ids=[
+        'policy_none',
+        'policy_async',
+        'policy_deferred',
+        # 'policy_executor',
+        'policy_inherit',
+        'policy_sync',
+        'policy_any',
+    ],
+)
+def test_then(thread_pool, policy):
+    x = 2
+
+    def f(future):
+        nonlocal x
+        x += 1
+
+    result = thread_pool.execute(job=lambda: None)
+    chained = result.then(func=f, policy=policy)
+    chained.wait()
 
     assert x == 3
