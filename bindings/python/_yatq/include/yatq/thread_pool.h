@@ -2,8 +2,8 @@
 #define _YATQ_THREAD_POOL_H
 
 #include <condition_variable>
-#include <cstdlib>
 #include <deque>
+#include <format>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -65,8 +65,8 @@ public:
         if (!_running) {
             _running = true;
             for (int i = 0; i < num_threads; ++i) {
-                std::string thread_tag = "pool thread #" + std::to_string(i);
-                auto thread = std::thread(&ThreadPool::thread_routine, this, thread_tag);
+                std::string thread_tag = std::format("pool thread #{}", i);
+                auto thread = std::thread(&ThreadPool::thread_routine, this, std::move(thread_tag));
                 _pool.push_back(std::move(thread));
             }
         }
@@ -119,7 +119,7 @@ public:
     }
 
 private:
-    void thread_routine(const std::string& thread_tag) {
+    void thread_routine(std::string&& thread_tag) {
 #ifndef YATQ_DISABLE_LOGGING
         static auto logger = log4cxx::Logger::getLogger("yatq.thread_pool");
 #endif
