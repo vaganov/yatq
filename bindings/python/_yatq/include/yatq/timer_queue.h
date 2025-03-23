@@ -337,7 +337,6 @@ private:
                     // NB: without this explicit cast duration type may be deduced incorrectly
                     // on Linux this leads to waiting for a random time point
                     std::chrono::time_point<Clock, typename Clock::duration> deadline = _heap[0].deadline;
-                    LOG4CXX_TRACE(logger, "Wait until " + utils::time_point_to_string(deadline));
                     LOG4CXX_TRACE(logger, std::format("Wait until {}", utils::time_point_to_string(deadline)));
                     bool notified = _cond.wait_until(
                             guard,
