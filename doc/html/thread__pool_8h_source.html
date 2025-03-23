@@ -26,7 +26,7 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">yatq<span id="projectnumber">&#160;1.0.2</span>
+   <div id="projectname">yatq<span id="projectnumber">&#160;1.1.0</span>
    </div>
   </td>
  </tr>
@@ -96,8 +96,8 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#define _YATQ_THREAD_POOL_H</span></div>
 <div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &lt;condition_variable&gt;</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;cstdlib&gt;</span></div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;deque&gt;</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;deque&gt;</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;format&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;functional&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;mutex&gt;</span></div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;string&gt;</span></div>
@@ -154,8 +154,8 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>        <span class="keywordflow">if</span> (!_running) {</div>
 <div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>            _running = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num_threads; ++i) {</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>                std::string thread_tag = <span class="stringliteral">&quot;pool thread #&quot;</span> + std::to_string(i);</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>                <span class="keyword">auto</span> thread = std::thread(&amp;ThreadPool::thread_routine, <span class="keyword">this</span>, thread_tag);</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>                std::string thread_tag = std::format(<span class="stringliteral">&quot;pool thread #{}&quot;</span>, i);</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>                <span class="keyword">auto</span> thread = std::thread(&amp;ThreadPool::thread_routine, <span class="keyword">this</span>, std::move(thread_tag));</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>                _pool.push_back(std::move(thread));</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>            }</div>
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>        }</div>
@@ -205,7 +205,7 @@ $(function(){ initResizable(false); });
 </div>
 <div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span> </div>
 <div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    <span class="keywordtype">void</span> thread_routine(<span class="keyword">const</span> std::string&amp; thread_tag) {</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    <span class="keywordtype">void</span> thread_routine(std::string&amp;&amp; thread_tag) {</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span><span class="preprocessor">#ifndef YATQ_DISABLE_LOGGING</span></div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        <span class="keyword">static</span> <span class="keyword">auto</span> logger = log4cxx::Logger::getLogger(<span class="stringliteral">&quot;yatq.thread_pool&quot;</span>);</div>
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span><span class="preprocessor">#endif</span></div>
