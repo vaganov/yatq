@@ -1,5 +1,5 @@
 from _yatq import __version__, TimerQueue, TimerHandle, ThreadPool, utils
-from .awaitable_future import AwaitableFuture
+from .pythonize import pythonize
 
 
-__all__ = ['__version__', 'TimerQueue', 'TimerHandle', 'ThreadPool', 'utils', 'AwaitableFuture']
+__all__ = ['__version__', 'TimerQueue', 'TimerHandle', 'ThreadPool', 'utils', 'pythonize']

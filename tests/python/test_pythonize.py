@@ -3,7 +3,7 @@ import pytest
 import asyncio
 from datetime import datetime, timedelta
 
-from pytq import AwaitableFuture
+from pytq import pythonize
 
 
 @pytest.mark.asyncio
@@ -19,16 +19,16 @@ async def test_yield(timer_queue):
     now = datetime.now()
     deadline = now + timedelta(milliseconds=100)
     handle = timer_queue.enqueue(deadline=deadline, job=lambda: None)
-    future = AwaitableFuture(handle.result)
+    future = pythonize(handle.result)
 
-    await asyncio.wait([asyncio.create_task(coro()), asyncio.create_task(future.get())], return_when=asyncio.FIRST_COMPLETED)
+    await asyncio.wait([asyncio.create_task(coro()), future], return_when=asyncio.FIRST_COMPLETED)
     assert cnt >= 10
 
 
 @pytest.mark.asyncio
 async def test_return_none(thread_pool):
     result = thread_pool.execute(job=lambda: None)
-    future = AwaitableFuture(result)
+    future = pythonize(result)
     return_value = await future
     assert return_value is None
 
@@ -36,7 +36,7 @@ async def test_return_none(thread_pool):
 @pytest.mark.asyncio
 async def test_return_scalar(thread_pool):
     result = thread_pool.execute(job=lambda: 1)
-    future = AwaitableFuture(result)
+    future = pythonize(result)
     return_value = await future
     assert return_value == 1
 
@@ -48,6 +48,6 @@ async def test_return_object(thread_pool):
 
     obj = C()
     result = thread_pool.execute(job=lambda: obj)
-    future = AwaitableFuture(result)
+    future = pythonize(result)
     return_value = await future
     assert return_value is obj

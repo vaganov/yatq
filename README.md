@@ -273,14 +273,14 @@ prior to passing to `pytq.TimerQueue`.
     return_value = handle.result.get()  # NB: blocking call
 
 It is worth noting that although `handle.result.get()` is a blocking call it will not block _python_ jobs called from
-other threads as it releases GIL upon entering _C++_ code (and so does `handle.result.wait()`). Also, thanks to
-[boost::future::is_ready()](https://www.boost.org/doc/libs/release/doc/html/thread/synchronization.html#thread.synchronization.futures.reference.unique_future.is_ready),
-a non-blocking async wrapper is available:
+other threads as it releases GIL upon entering _C++_ code (and so does `handle.result.wait()`). Also, `handle.result`
+may be turned into a `asyncio.Future`:
 
     import asyncio
     from datetime import datetime, timedelta
+    from typing import Any
 
-    from pytq import ThreadPool, TimerQueue, AwaitableFuture
+    from pytq import ThreadPool, TimerQueue, pythonize
 
 
     async def main():
@@ -293,9 +293,8 @@ a non-blocking async wrapper is available:
         deadline = datetime.now() + timedelta(milliseconds=100)
         handle = timer_queue.enqueue(deadline=deadline, job=lambda: print('Hello'))
         
-        future = AwaitableFuture(handle.result)
-        return_value = await future  # yields until result is ready
-        # return_value = await future.get()  # same, but eligible for 'asyncio.create_task()' etc.
+        future: asyncio.Future[Any] = pythonize(handle.result)
+        return_value = await future
         
         timer_queue.stop()
         thread_pool.stop()
@@ -304,18 +303,7 @@ a non-blocking async wrapper is available:
     if __name__ == '__main__':
         asyncio.run(main())
 
-Please be aware that `AwaitableFuture.__await__()` and `AwaitableFuture.get()` are essentially polls, that is in a
-non-concurrent application blocking on `handle.result.get()` would be more efficient CPU-wise.
-
-    def __await__(self):
-        while not self._future.is_ready():
-            yield
-        return self._future.get()
-
-    async def get(self):
-        while not self._future.is_ready():
-            await asyncio.sleep(0)
-        return self._future.get()
+Please note that `handle.result` is destroyed by `pythonize()` and cannot be awaited on.
 
 #### Scheduling tweaks
 
