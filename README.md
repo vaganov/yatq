@@ -212,10 +212,11 @@ with `Executable`, a type matching `ExecutableGeneric` concept:
 For an example of different instantiation see [tests/precision/test_precision.cpp](tests/precision/test_precision.cpp).
 
 #### Job return values
-Both `ThreadPool` and `TimerQueue` provide job return values through futures:
+Both `ThreadPool` and `TimerQueue` provide job return values as well as thrown exceptions through futures:
 
     #include <chrono>
     #include <cstdlib>
+    #include <exception>
     #include <functional>
     #include <iostream>
 
@@ -231,10 +232,18 @@ Both `ThreadPool` and `TimerQueue` provide job return values through futures:
     
         auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(100);
         auto handle = timer_queue.enqueue(deadline, [] () { return 1; });
+        auto exc_handle = timer_queue.enqueue(deadline, [] () -> int { throw std::runtime_error("test"); });
 
         auto return_value = handle.result.get();  // NB: blocking call
         std::cout << "return_value=" << return_value << std::endl;
-    
+
+        try {
+            exc_handle.result.get();
+        }
+        catch (const std::exception& exc) {
+            std::cerr << "exception=" << exc.what() << std::endl;
+        }
+
         timer_queue.stop();
         thread_pool.stop();
 
@@ -274,7 +283,7 @@ prior to passing to `pytq.TimerQueue`.
 
 It is worth noting that although `handle.result.get()` is a blocking call it will not block _python_ jobs called from
 other threads as it releases GIL upon entering _C++_ code (and so does `handle.result.wait()`). Also, `handle.result`
-may be turned into a `asyncio.Future`:
+may be turned into an `asyncio.Future`:
 
     import asyncio
     from datetime import datetime, timedelta
@@ -289,13 +298,23 @@ may be turned into a `asyncio.Future`:
         
         thread_pool.start(num_threads=1)
         timer_queue.start()
+
+        def raise_exc():
+            raise RuntimeError
         
         deadline = datetime.now() + timedelta(milliseconds=100)
         handle = timer_queue.enqueue(deadline=deadline, job=lambda: print('Hello'))
+        exc_handle = timer_queue.enqueue(deadline=deadline, job=raise_exc)
         
         future: asyncio.Future[Any] = pythonize(handle.result)
         return_value = await future
-        
+
+        future = pythonize(exc_handle.result)
+        try:
+            await future
+        except Exception as exc:
+            ...
+
         timer_queue.stop()
         thread_pool.stop()
 
@@ -303,7 +322,10 @@ may be turned into a `asyncio.Future`:
     if __name__ == '__main__':
         asyncio.run(main())
 
-Please note that `handle.result` is destroyed by `pythonize()` and cannot be awaited on.
+Please note that `handle.result` is destroyed by `pythonize()` and cannot be awaited on. Also, please note that,
+although exceptions are dispatched by `pythonize()`, after a roundtrip _python_ -> _C++_ -> _python_ an exception is
+most likely to end up as a `RuntimeError`. You may want to refer to binding mechanism
+[exception translation table](https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html).
 
 #### Scheduling tweaks
 
@@ -462,6 +484,15 @@ For other build systems, please refer to your build system documentation on how 
     (venv) $ pip install bindings/python
 
 [(why step 1)](https://stackoverflow.com/questions/61235727/no-module-named-pybind11-after-installing-pybind11)
+
+Please note that on _macOS_ one may need to specify **MACOSX_DEPLOYMENT_TARGET** environment variable on install. Do not
+set higher than the current _macOS_ version. Minimal supported version is **13.4**
+
+    (venv) $ MACOSX_DEPLOYMENT_TARGET=13.4 pip install pytq-cxx
+
+or
+
+    (venv) $ MACOSX_DEPLOYMENT_TARGET=13.4 pip install bindings/python
 
 To run tests:
 

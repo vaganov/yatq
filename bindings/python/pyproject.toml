@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pytq-cxx"
-version = "1.1.0"
+version = "1.1.1"
 authors = [{name="Nikita Vaganov", email="nikita.e.vaganov@gmail.com"}]
 description = "single-threaded timer demultiplexer backed by C++ implementation"
 readme = "README_pytq.md"

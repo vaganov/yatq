@@ -17,7 +17,9 @@
 #endif
 
 #include "yatq/internal/concepts.h"
+#ifndef YATQ_DISABLE_FUTURES
 #include "yatq/internal/promise_utils.h"
+#endif
 #include "yatq/internal/log4cxx_proxy.h"
 #include "yatq/utils/logging_utils.h"
 #ifndef YATQ_DISABLE_PTHREAD
