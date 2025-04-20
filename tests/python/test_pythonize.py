@@ -51,3 +51,14 @@ async def test_return_object(thread_pool):
     future = pythonize(result)
     return_value = await future
     assert return_value is obj
+
+
+@pytest.mark.asyncio
+async def test_raise_exception(thread_pool):
+    def f():
+        raise RuntimeError
+
+    result = thread_pool.execute(job=f)
+    future = pythonize(result)
+    with pytest.raises(Exception):
+        await future

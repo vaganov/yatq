@@ -12,9 +12,11 @@ def pythonize(src: _yatq.boost.future) -> asyncio.Future[Any]:
 
     def on_done(future: _yatq.boost.future):
         try:
-            chained.get_loop().call_soon_threadsafe(chained.set_result, future.get())
+            result = future.get()
         except Exception as exc:
-            chained.set_exception(exc)
+            chained.get_loop().call_soon_threadsafe(chained.set_exception, exc)
+        else:
+            chained.get_loop().call_soon_threadsafe(chained.set_result, result)
 
     src.then(func=on_done, policy=_yatq.boost.launch.sync)
     return chained

@@ -1,3 +1,5 @@
+import pytest
+
 from datetime import datetime, timedelta
 from functools import partial
 import time
@@ -241,3 +243,14 @@ def test_in_queue(timer_queue):
     time.sleep(0.3)
     assert x == 3
     assert not timer_queue.in_queue(uid=short_handle.uid)
+
+
+def test_exception(timer_queue):
+    def f():
+        raise RuntimeError
+
+    now = datetime.now()
+    deadline = now + timedelta(milliseconds=100)
+    handle = timer_queue.enqueue(deadline=deadline, job=f)
+    with pytest.raises(Exception):
+        handle.result.get()
