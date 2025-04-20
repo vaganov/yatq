@@ -1,5 +1,7 @@
 #include <chrono>
 #include <cstdlib>
+#include <exception>
+#include <format>
 #include <string>
 
 #include <sched.h>
@@ -31,9 +33,16 @@ int main() {
     auto deadline = now + std::chrono::milliseconds(100);
     auto handle = timer_queue.enqueue(deadline, [] () { return C {"test"}; });
     auto another_handle = timer_queue.enqueue(deadline, [] () { return C {"won't make it"}; });
+    auto exc_handle = timer_queue.enqueue(deadline, [] () -> C { throw std::runtime_error("test"); });
     timer_queue.cancel(another_handle.uid);
     auto return_value = handle.result.get();
-    LOG4CXX_INFO(logger, "return_value=" + return_value.s);
+    LOG4CXX_INFO(logger, std::format("return_value={}", return_value.s));
+    try {
+        exc_handle.result.get();
+    }
+    catch (const std::exception& exc) {
+        LOG4CXX_ERROR(logger, std::format("exception={}", std::string(exc.what())));
+    }
 
     timer_queue.stop();
     thread_pool.stop();
