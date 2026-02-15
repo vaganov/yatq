@@ -2,9 +2,11 @@
 #define _YATQ_UTILS_LOGGING_UTILS_H
 
 #include <chrono>
+#include <ctime>
 #include <iomanip>
 #include <locale>
 #include <sstream>
+#include <string>
 
 #include <sched.h>
 

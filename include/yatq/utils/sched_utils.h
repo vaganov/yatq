@@ -2,6 +2,7 @@
 #define _YATQ_UTILS_SCHED_UTILS_H
 
 #include <cerrno>
+#include <cstring>
 #include <format>
 #include <string>
 
