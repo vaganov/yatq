@@ -2,12 +2,15 @@
 #define _YATQ_THREAD_POOL_H
 
 #include <condition_variable>
+#include <cstddef>
+#include <exception>
 #include <deque>
 #include <format>
 #include <functional>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #ifndef YATQ_DISABLE_FUTURES
@@ -140,13 +143,20 @@ private:
                 queue_entry = std::move(_queue.front());
                 _queue.pop_front();
             }
-            LOG4CXX_TRACE(logger, "Start job");
 #ifndef YATQ_DISABLE_FUTURES
+            LOG4CXX_TRACE(logger, "Start job");
             internal::run_and_set_value<result_type>(std::move(queue_entry.job), std::move(queue_entry.promise));
-#else
-            queue_entry.job();
-#endif
             LOG4CXX_TRACE(logger, "Job complete");
+#else
+            try {
+                LOG4CXX_TRACE(logger, "Start job");
+                queue_entry.job();
+                LOG4CXX_TRACE(logger, "Job complete");
+            }
+            catch (const std::exception& exc) {
+                LOG4CXX_ERROR(logger, exc.what());
+            }
+#endif
         }
 
         LOG4CXX_INFO(logger, "Stop");
