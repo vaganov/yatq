@@ -2,6 +2,7 @@
 #define _YATQ_THREAD_POOL_H
 
 #include <condition_variable>
+#include <cstddef>
 #include <exception>
 #include <deque>
 #include <format>
@@ -9,6 +10,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #ifndef YATQ_DISABLE_FUTURES
