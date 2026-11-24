@@ -65,68 +65,68 @@ comes with an executor to actually run jobs.
 
 ## Usage
 ### Basic usage (C++)
+```c++
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
 
-    #include <chrono>
-    #include <cstdlib>
-    #include <iostream>
+#include <unistd.h>
 
-    #include <unistd.h>
+#include <yatq/thread_pool.h>
+#include <yatq/timer_queue.h>
 
-    #include <yatq/thread_pool.h>
-    #include <yatq/timer_queue.h>
+int main() {
+    yatq::ThreadPool thread_pool;
+    yatq::TimerQueue timer_queue(&thread_pool);
 
-    int main() {
-        yatq::ThreadPool thread_pool;
-        yatq::TimerQueue timer_queue(&thread_pool);
-    
-        thread_pool.start(8);
-        timer_queue.start();
-    
-        auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(100);
-        timer_queue.enqueue(deadline, [] () { std::cout << "Hello" << std::endl; });
+    thread_pool.start(8);
+    timer_queue.start();
 
-        ::sleep(1);
-    
-        timer_queue.stop();
-        thread_pool.stop();
+    auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(100);
+    timer_queue.enqueue(deadline, [] () { std::cout << "Hello" << std::endl; });
 
-        return EXIT_SUCCESS;
-    }
+    ::sleep(1);
 
+    timer_queue.stop();
+    thread_pool.stop();
+
+    return EXIT_SUCCESS;
+}
+```
 ### Basic usage (python)
+```python
+from datetime import datetime, timedelta
+import time
 
-    from datetime import datetime, timedelta
-    import time
-
-    from pytq import ThreadPool, TimerQueue
+from pytq import ThreadPool, TimerQueue
 
 
-    def main():
-        thread_pool = ThreadPool()
-        timer_queue = TimerQueue(executor=thread_pool)
-        
-        thread_pool.start(num_threads=1)  # python jobs are going to acquire GIL anyway
-        timer_queue.start()
-        
-        deadline = datetime.now() + timedelta(milliseconds=100)
-        timer_queue.enqueue(deadline=deadline, job=lambda: print('Hello'))
-        
-        time.sleep(1)
-        
-        timer_queue.stop()
-        thread_pool.stop()
+def main():
+    thread_pool = ThreadPool()
+    timer_queue = TimerQueue(executor=thread_pool)
+    
+    thread_pool.start(num_threads=1)  # python jobs are going to acquire GIL anyway
+    timer_queue.start()
+    
+    deadline = datetime.now() + timedelta(milliseconds=100)
+    timer_queue.enqueue(deadline=deadline, job=lambda: print('Hello'))
+    
+    time.sleep(1)
+    
+    timer_queue.stop()
+    thread_pool.stop()
 
 
     if __name__ == '__main__':
         main()
-
+```
 ### API notes (C++)
 #### Executor
 For the sake of flexibility executor is a separate object. Note that `TimerQueue` takes a raw pointer to an executor and
 does not take ownership:
-
-    explicit TimerQueue(Executor* executor);
-
+```c++
+explicit TimerQueue(Executor* executor);
+```
 #### Deadlines
 `TimerQueue` sorts timed jobs by their deadlines. To avoid jitter brought by `Clock::now()` (potentially a system call),
 duration arguments are not accepted by `enqueue()`. To use duration you may add it to `TimerQueue::Clock::now()` (see
@@ -171,10 +171,10 @@ See also [TimerQueue](https://vaganov.github.io/yatq/doc/html/classyatq_1_1_time
 ### Advanced usage (C++)
 #### Canceling timers
 A timed job can be canceled through a hangle returned by `enqueue()`:
-
-    auto handle = timer_queue.enqueue(deadline, job);
-    bool canceled = timer_queue.cancel(handle.uid);
-
+```c++
+auto handle = timer_queue.enqueue(deadline, job);
+bool canceled = timer_queue.cancel(handle.uid);
+```
 (A job already executed or passed to executor cannot be canceled, in which case `cancel()` returns `false`)
 
 #### Template parameters
@@ -182,28 +182,28 @@ A timed job can be canceled through a hangle returned by `enqueue()`:
 to [std::condition_variable::wait_until()](https://en.cppreference.com/w/cpp/thread/condition_variable/wait_until),
 `Clock` shall be one of `std::chrono` clock types (`std::chrono::system_clock` by default). `Executor` may be any type
 matching `ExecutorGeneric` concept (see [<yatq/internal/concepts.h>](include/yatq/internal/concepts.h)):
-
-    template<typename Executor>
-    concept ExecutorGeneric =
-            ChainableFutureGeneric<typename Executor::Future, typename Executor::Executable::result_type> &&
-            requires(Executor executor, Executor::Executable job) {
-        typename Executor::Executable;
-        typename Executor::Executable::result_type;
-        std::movable<typename Executor::Executable>;
-        typename Executor::Future;
-        { executor.execute(job) } -> std::convertible_to<typename Executor::Future>;
-    };
-
+```c++
+template<typename Executor>
+concept ExecutorGeneric =
+        ChainableFutureGeneric<typename Executor::Future, typename Executor::Executable::result_type> &&
+        requires(Executor executor, Executor::Executable job) {
+    typename Executor::Executable;
+    typename Executor::Executable::result_type;
+    std::movable<typename Executor::Executable>;
+    typename Executor::Future;
+    { executor.execute(job) } -> std::convertible_to<typename Executor::Future>;
+};
+```
 **yatq** comes with a default `Executor` implementation: `ThreadPool` -- which is in turn a template class parametrized
 with `Executable`, a type matching `ExecutableGeneric` concept:
-
-    template<typename Executable>
-    concept ExecutableGeneric = requires {
-        typename Executable::result_type;
-        std::invocable<Executable>;
-        std::movable<Executable>;
-    };
-
+```c++
+template<typename Executable>
+concept ExecutableGeneric = requires {
+    typename Executable::result_type;
+    std::invocable<Executable>;
+    std::movable<Executable>;
+};
+```
 (`std::function<void(void)>` being an obvious default). This said, `TimerQueue` may be instantiated with:
 - another `std::chrono` clock
 - `ThreadPool` with another executable
@@ -213,54 +213,54 @@ For an example of different instantiation see [tests/precision/test_precision.cp
 
 #### Job return values
 Both `ThreadPool` and `TimerQueue` provide job return values as well as thrown exceptions through futures:
+```c++
+#include <chrono>
+#include <cstdlib>
+#include <exception>
+#include <functional>
+#include <iostream>
 
-    #include <chrono>
-    #include <cstdlib>
-    #include <exception>
-    #include <functional>
-    #include <iostream>
+#include <yatq/thread_pool.h>
+#include <yatq/timer_queue.h>
 
-    #include <yatq/thread_pool.h>
-    #include <yatq/timer_queue.h>
+int main() {
+    yatq::ThreadPool<std::function<int(void)>> thread_pool;
+    yatq::TimerQueue timer_queue(&thread_pool);
 
-    int main() {
-        yatq::ThreadPool<std::function<int(void)>> thread_pool;
-        yatq::TimerQueue timer_queue(&thread_pool);
-    
-        thread_pool.start(8);
-        timer_queue.start();
-    
-        auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(100);
-        auto handle = timer_queue.enqueue(deadline, [] () { return 1; });
-        auto exc_handle = timer_queue.enqueue(deadline, [] () -> int { throw std::runtime_error("test"); });
+    thread_pool.start(8);
+    timer_queue.start();
 
-        auto return_value = handle.result.get();  // NB: blocking call
-        std::cout << "return_value=" << return_value << std::endl;
+    auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(100);
+    auto handle = timer_queue.enqueue(deadline, [] () { return 1; });
+    auto exc_handle = timer_queue.enqueue(deadline, [] () -> int { throw std::runtime_error("test"); });
 
-        try {
-            exc_handle.result.get();
-        }
-        catch (const std::exception& exc) {
-            std::cerr << "exception=" << exc.what() << std::endl;
-        }
+    auto return_value = handle.result.get();  // NB: blocking call
+    std::cout << "return_value=" << return_value << std::endl;
 
-        timer_queue.stop();
-        thread_pool.stop();
-
-        return EXIT_SUCCESS;
+    try {
+        exc_handle.result.get();
+    }
+    catch (const std::exception& exc) {
+        std::cerr << "exception=" << exc.what() << std::endl;
     }
 
+    timer_queue.stop();
+    thread_pool.stop();
+
+    return EXIT_SUCCESS;
+}
+```
 #### Scheduling tweaks
 (Assuming OS user has sufficient privileges) `TimerQueue` may be started with specified POSIX scheduling policy and
 thread priority (`yatq::utils::max_priority` by default). For time sensitive applications it is highly recommended to
 use `SCHED_FIFO` policy:
+```c++
+#include <sched.h>
 
-    #include <sched.h>
+...
 
-    ...
-
-    timer_queue.start(SCHED_FIFO);
-
+timer_queue.start(SCHED_FIFO);
+```
 ### Advanced usage (python)
 Since uninstantiated _C++_ templates do not generate object code, they cannot be embedded in _python_; only `ThreadPool`
 instantiated with `Executable = std::function<pybind11::object(void)>` and `TimerQueue` instantiated with that
@@ -269,72 +269,72 @@ be passed as an executor and only `datetime` object may be passed as `deadline` 
 features are available.
 
 #### Canceling timers
-
-    handle = timer_queue.enqueue(deadline=deadline, job=job)
-    canceled = timer_queue.cancel(uid=handle.uid)
-
+```python
+handle = timer_queue.enqueue(deadline=deadline, job=job)
+canceled = timer_queue.cancel(uid=handle.uid)
+```
 #### Awaiting return value
 A function returning any _python_ entity (`None`, a scalar or an object) may be enqueued. Arguments, however, should be
 bound (say, with a lambda or [functools.partial](https://docs.python.org/3/library/functools.html#functools.partial))
 prior to passing to `pytq.TimerQueue`.
-
-    handle = timer_queue.enqueue(deadline=deadline, job=job)
-    return_value = handle.result.get()  # NB: blocking call
-
+```python
+handle = timer_queue.enqueue(deadline=deadline, job=job)
+return_value = handle.result.get()  # NB: blocking call
+```
 It is worth noting that although `handle.result.get()` is a blocking call it will not block _python_ jobs called from
 other threads as it releases GIL upon entering _C++_ code (and so does `handle.result.wait()`). Also, `handle.result`
 may be turned into an `asyncio.Future`:
+```python
+import asyncio
+from datetime import datetime, timedelta
+from typing import Any
 
-    import asyncio
-    from datetime import datetime, timedelta
-    from typing import Any
-
-    from pytq import ThreadPool, TimerQueue, pythonize
-
-
-    async def main():
-        thread_pool = ThreadPool()
-        timer_queue = TimerQueue(executor=thread_pool)
-        
-        thread_pool.start(num_threads=1)
-        timer_queue.start()
-
-        def raise_exc():
-            raise RuntimeError
-        
-        deadline = datetime.now() + timedelta(milliseconds=100)
-        handle = timer_queue.enqueue(deadline=deadline, job=lambda: print('Hello'))
-        exc_handle = timer_queue.enqueue(deadline=deadline, job=raise_exc)
-        
-        future: asyncio.Future[Any] = pythonize(handle.result)
-        return_value = await future
-
-        future = pythonize(exc_handle.result)
-        try:
-            await future
-        except Exception as exc:
-            ...
-
-        timer_queue.stop()
-        thread_pool.stop()
+from pytq import ThreadPool, TimerQueue, pythonize
 
 
-    if __name__ == '__main__':
-        asyncio.run(main())
+async def main():
+    thread_pool = ThreadPool()
+    timer_queue = TimerQueue(executor=thread_pool)
+    
+    thread_pool.start(num_threads=1)
+    timer_queue.start()
 
+    def raise_exc():
+        raise RuntimeError
+    
+    deadline = datetime.now() + timedelta(milliseconds=100)
+    handle = timer_queue.enqueue(deadline=deadline, job=lambda: print('Hello'))
+    exc_handle = timer_queue.enqueue(deadline=deadline, job=raise_exc)
+    
+    future: asyncio.Future[Any] = pythonize(handle.result)
+    return_value = await future
+
+    future = pythonize(exc_handle.result)
+    try:
+        await future
+    except Exception as exc:
+        ...
+
+    timer_queue.stop()
+    thread_pool.stop()
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
 Please note that `handle.result` is destroyed by `pythonize()` and cannot be awaited on. Also, please note that,
 although exceptions are dispatched by `pythonize()`, after a roundtrip _python_ -> _C++_ -> _python_ an exception is
 most likely to end up as a `RuntimeError`. You may want to refer to binding mechanism
 [exception translation table](https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html).
 
 #### Scheduling tweaks
+```python
+import os
 
-    import os
+...
 
-    ...
-
-    timer_queue.start(sched_policy=os.SCHED_FIFO)
-
+timer_queue.start(sched_policy=os.SCHED_FIFO)
+```
 ### Timer precision
 How precise is timer? In other words, what are expected delays between specified deadline and actual execution?
 
@@ -346,30 +346,30 @@ priority; the logging is compiled out.
 
 Delay samples may be analyzed with any statistical tool. Please find a
 [jupyter notebook](tests/precision/delay_histogram.ipynb) to draw a histogram:
+```python
+[]: %matplotlib inline
 
-    []: %matplotlib inline
+[]: import matplotlib.pyplot as plt
 
-    []: import matplotlib.pyplot as plt
+[]: import numpy as np
 
-    []: import numpy as np
+[]: from scipy.stats.mstats import winsorize
 
-    []: from scipy.stats.mstats import winsorize
+[]: tq_delays = np.fromfile('tq_delays.dat', sep=',')
 
-    []: tq_delays = np.fromfile('tq_delays.dat', sep=',')
+[]: tq_delays.min(), tq_delays.max()
 
-    []: tq_delays.min(), tq_delays.max()
+[]: tq_delays.mean(), tq_delays.std(ddof=1)  # Bessel’s correction
 
-    []: tq_delays.mean(), tq_delays.std(ddof=1)  # Bessel’s correction
-
-    []: _ = plt.hist(winsorize(tq_delays, limits=(0, 0.01)), bins=100)  # you may want to winsorize the tail percentile
-
+[]: _ = plt.hist(winsorize(tq_delays, limits=(0, 0.01)), bins=100)  # you may want to winsorize the tail percentile
+```
 Timer delays are mostly brought by underlying
 [std::condition_variable::wait_until()](https://en.cppreference.com/w/cpp/thread/condition_variable/wait_until). To see
 its delay distribution on a particular machine, run **test_wait_until** test: it runs for about 10 sec and saves delay
 samples as **cv_delays.dat** in the working directory. The test does not involve **yatq** except for calling
-
-    yatq::utils::set_sched_params(pthread_self(), SCHED_FIFO, yatq::utils::max_priority);
-
+```c++
+yatq::utils::set_sched_params(pthread_self(), SCHED_FIFO, yatq::utils::max_priority);
+```
 `std::chrono::high_resolution_clock` is being used as clock. Delay samples may be visualized with the same
 [jupyter notebook](tests/precision/delay_histogram.ipynb).
 
@@ -387,10 +387,10 @@ which has not yet been adopted by C++ standard but has been
 [implemented](https://www.boost.org/doc/libs/release/doc/html/thread/synchronization.html#thread.synchronization.futures.then)
 in **boost**. If using **boost** is undesirable, one may define `YATQ_DISABLE_FUTURES` macro (in which case the
 possibility to obtain job results will be lost):
-
-    #define YATQ_DISABLE_FUTURES
-    #include <yatq/timer_queue.h>
-
+```c++
+#define YATQ_DISABLE_FUTURES
+#include <yatq/timer_queue.h>
+```
 ### [log4cxx](https://logging.apache.org/log4cxx/latest_stable/download.html)
 **log4cxx** is being used as a logging engine. If a multithreaded executor and an asynchronous appender (which is highly
 recommended for time sensitive applications) are used, passing some sort of thread identifier to logging might be very
@@ -398,17 +398,17 @@ useful. For that purpose **yatq** threads use `threadTag` key in
 [log4cxx::MDC](https://logging.apache.org/log4cxx/latest_stable/classlog4cxx_1_1MDC.html). See included
 [log4cxx.xml](log4cxx.xml) config for usage example. If using **log4cxx** is undesirable, one may define
 `YATQ_DISABLE_LOGGING` macro (in which case no logs will be produced):
-
-    #define YATQ_DISABLE_LOGGING
-    #include <yatq/timer_queue.h>
-
+```c++
+#define YATQ_DISABLE_LOGGING
+#include <yatq/timer_queue.h>
+```
 ### pthread
 **pthread** is being used to set timer queue thread scheduling parameters. If using **pthread** is undesirable, one may
 define `YATQ_DISABLE_PTHREAD` macro (in which case `TimerQueue` may only be started with default scheduling parameters):
-
-    #define YATQ_DISABLE_PTHREAD
-    #include <yatq/timer_queue.h>
-
+```c++
+#define YATQ_DISABLE_PTHREAD
+#include <yatq/timer_queue.h>
+```
 ### [cmake](https://cmake.org/download)
 **cmake** is being used for building tests and installation (the latter may be done by simply copying the headers).
 
@@ -418,9 +418,9 @@ define `YATQ_DISABLE_PTHREAD` macro (in which case `TimerQueue` may only be star
 ## Prerequisites and dependencies (python)
 Since _python_ wrapper is essentially a dynamic library, all _C++_ dependencies apply as well. _python_ dependencies may
 be installed all at once with
-
-    (venv) $ pip install -r bindings/python/requirements.txt
-
+```shell
+(venv) $ pip install -r bindings/python/requirements.txt
+```
 ### python 3.7+
 _python_ wrapper has been tested on versions _python3.7_ -- _python3.12_ as older versions are out of support.
 
@@ -440,65 +440,65 @@ _python_ wrapper has been tested on versions _python3.7_ -- _python3.12_ as olde
 Since **yatq** is a template library, there is no build stage as such (apart from the tests).
 
 ### cmake
-
-    $ git clone https://github.com/vaganov/yatq
-    $ cd yatq
-    $ cmake .
-    $ sudo cmake --install .
-
+```shell
+$ git clone https://github.com/vaganov/yatq
+$ cd yatq
+$ cmake .
+$ sudo cmake --install .
+```
 ### shell
-
-    $ git clone https://github.com/vaganov/yatq
-    $ cd yatq
-    $ sudo cp -r include/yatq /usr/local/include
-
+```shell
+$ git clone https://github.com/vaganov/yatq
+$ cd yatq
+$ sudo cp -r include/yatq /usr/local/include
+```
 ### running tests
-
-    $ cd cmake-build  # YMMV
-    $ make
-    $ ctest
-
+```shell
+$ cd cmake-build  # YMMV
+$ make
+$ ctest
+```
 ### building the application
 Make sure to link your application against dependency libraries. If using **cmake**, see
 [CMakeLists.txt](CMakeLists.txt) (**yatq_example** target):
+```cmake
+find_package(Boost CONFIG REQUIRED COMPONENTS thread)
+find_package(log4cxx CONFIG REQUIRED)
 
-    find_package(Boost CONFIG REQUIRED COMPONENTS thread)
-    find_package(log4cxx CONFIG REQUIRED)
-
-    target_link_libraries(yatq_example Boost::thread log4cxx)
-
+target_link_libraries(yatq_example Boost::thread log4cxx)
+```
 For other build systems, please refer to your build system documentation on how to locate and link dependencies.
 
 ## Build and install (python)
 (Assuming target _python_ environment has been activated, if any)
 
 ### pip
-
-    (venv) $ pip install pytq-cxx
-
+```shell
+(venv) $ pip install pytq-cxx
+```
 ### building from source
-
-    (venv) $ pip install wheel setuptools pip --upgrade
-    (venv) $ git clone https://github.com/vaganov/yatq
-    (venv) $ cd yatq
-    (venv) $ pip install bindings/python
-
+```shell
+(venv) $ pip install wheel setuptools pip --upgrade
+(venv) $ git clone https://github.com/vaganov/yatq
+(venv) $ cd yatq
+(venv) $ pip install bindings/python
+```
 [(why step 1)](https://stackoverflow.com/questions/61235727/no-module-named-pybind11-after-installing-pybind11)
 
 Please note that on _macOS_ one may need to specify **MACOSX_DEPLOYMENT_TARGET** environment variable on install. Do not
 set higher than the current _macOS_ version. Minimal supported version is **13.4**
-
-    (venv) $ MACOSX_DEPLOYMENT_TARGET=13.4 pip install pytq-cxx
-
+```shell
+(venv) $ MACOSX_DEPLOYMENT_TARGET=13.4 pip install pytq-cxx
+```
 or
-
-    (venv) $ MACOSX_DEPLOYMENT_TARGET=13.4 pip install bindings/python
-
+```shell
+(venv) $ MACOSX_DEPLOYMENT_TARGET=13.4 pip install bindings/python
+```
 To run tests:
-
-    (venv) $ pip install -r bindings/python/requirements.txt
-    (venv) $ pytest tests/python
-
+```shell
+(venv) $ pip install -r bindings/python/requirements.txt
+(venv) $ pytest tests/python
+```
 ## Comparison with analogs
 Despite "yet another" in the name, not many analogs may be found out there. However,
 [BDE](http://bloomberg.github.io/bde/index.html)'s
